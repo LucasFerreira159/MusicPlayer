@@ -11,6 +11,7 @@ import android.os.Binder
 import android.os.IBinder
 import android.util.Log
 import java.io.IOException
+import java.lang.NullPointerException
 
 class MediaPlayerService :
     Service(), OnCompletionListener, OnPreparedListener,
@@ -103,6 +104,39 @@ class MediaPlayerService :
 
     override fun onBind(intent: Intent?): IBinder? {
         return iBinder
+    }
+
+    /**
+     * O sistema chama esse método quando uma atividade solicita que o serviço seja iniciado
+     */
+    override fun onStartCommand(intent: Intent?, flags: Int, startId: Int): Int {
+
+        try {
+            // Um ​​arquivo de áudio é passado para o serviço através de putExtra ();
+            mediaFile = intent?.extras?.getString("media")
+        } catch (e: NullPointerException) {
+            stopSelf()
+        }
+
+        // Solicita foco de áudio
+        if (!requestAudioFocus()) {
+            //Não foi possível obter o foco
+            stopSelf()
+        }
+
+        if (mediaFile != null && mediaFile != "")
+            initMediaPlayer()
+
+        return super.onStartCommand(intent, flags, startId)
+    }
+
+    override fun onDestroy() {
+        super.onDestroy()
+        mediaPlayer?.let {
+            stopMedia()
+            it.release()
+        }
+        removeAudioFocus()
     }
 
     private fun initMediaPlayer() {
