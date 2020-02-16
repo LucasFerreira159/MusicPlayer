@@ -1,8 +1,10 @@
 package com.app4fun.musicplayer.service
 
 import android.app.Service
+import android.content.Context
 import android.content.Intent
 import android.media.AudioManager
+import android.media.AudioManager.*
 import android.media.MediaPlayer
 import android.media.MediaPlayer.*
 import android.os.Binder
@@ -10,20 +12,17 @@ import android.os.IBinder
 import android.util.Log
 import java.io.IOException
 
-class MediaPlayerService:
+class MediaPlayerService :
     Service(), OnCompletionListener, OnPreparedListener,
     OnErrorListener, OnSeekCompleteListener, OnInfoListener,
-    OnBufferingUpdateListener, AudioManager.OnAudioFocusChangeListener
-{
+    OnBufferingUpdateListener, AudioManager.OnAudioFocusChangeListener {
 
     private val iBinder: IBinder = LocalBinder()
+    private lateinit var audioManager: AudioManager
 
     private var resumePosition: Int = 0
-
-    private val mediaPlayer: MediaPlayer by lazy {
-        MediaPlayer()
-    }
     private var mediaFile: String? = null
+    private var mediaPlayer: MediaPlayer? = null
 
     override fun onCompletion(mp: MediaPlayer?) {
         //Invoked when playback of a media source has completed.
@@ -39,7 +38,7 @@ class MediaPlayerService:
 
     override fun onError(mp: MediaPlayer?, what: Int, extra: Int): Boolean {
         //Invoked when there has been an error during an asynchronous operation.
-        when(what) {
+        when (what) {
             MEDIA_ERROR_NOT_VALID_FOR_PROGRESSIVE_PLAYBACK -> {
                 Log.d("MediaPlayer Error", "MÍDIA NÃO É VÁLIDA PARA REPRODUÇÃO  $extra");
             }
@@ -68,64 +67,120 @@ class MediaPlayerService:
     }
 
     override fun onAudioFocusChange(focusChange: Int) {
-        //Invoked when the audio focus of the system is updated.
+        //Chamado quando o audio for modificado
+        when (focusChange) {
+            AUDIOFOCUS_GAIN -> {
+                //O serviço ganhou foco no áudio, por isso precisa começar a tocar.
+                mediaPlayer?.let {
+                    if (!it.isPlaying) it.start();
+                    it.setVolume(1.0f, 1.0f)
+                } ?: initMediaPlayer()
+            }
+            AUDIOFOCUS_LOSS -> {
+                //O serviço perdeu o foco do áudio, provavelmente o usuário mudou para reproduzir
+                // mídia em outro aplicativo, então libere o media player.
+                mediaPlayer?.let {
+                    if (it.isPlaying) it.stop()
+                    it.release()
+                    mediaPlayer = null
+                }
+            }
+            AUDIOFOCUS_LOSS_TRANSIENT -> {
+                //Fucos perdeu por um curto período de tempo, faça uma pausa no MediaPlayer.
+                mediaPlayer?.let {
+                    if (it.isPlaying) it.pause()
+                }
+            }
+            AUDIOFOCUS_LOSS_TRANSIENT_CAN_DUCK -> {
+                //Perdeu o foco por um curto período de tempo, provavelmente uma notificação
+                // chegou ao dispositivo, diminua o volume da reprodução.
+                mediaPlayer?.let {
+                    if (it.isPlaying) it.setVolume(0.1f, 0.1f)
+                }
+            }
+        }
     }
 
     override fun onBind(intent: Intent?): IBinder? {
         return iBinder
     }
 
-    private fun initMidiaPlayer() {
-        mediaPlayer.setOnCompletionListener(this)
-        mediaPlayer.setOnErrorListener(this)
-        mediaPlayer.setOnPreparedListener(this)
-        mediaPlayer.setOnBufferingUpdateListener(this)
-        mediaPlayer.setOnSeekCompleteListener(this)
-        mediaPlayer.setOnInfoListener(this)
-        mediaPlayer.reset()
+    private fun initMediaPlayer() {
+        mediaPlayer = MediaPlayer()
 
-        mediaPlayer.setAudioStreamType(AudioManager.STREAM_MUSIC)
+        mediaPlayer?.let {
+            it.setOnCompletionListener(this)
+            it.setOnErrorListener(this)
+            it.setOnPreparedListener(this)
+            it.setOnBufferingUpdateListener(this)
+            it.setOnSeekCompleteListener(this)
+            it.setOnInfoListener(this)
+            it.reset()
 
-        try {
-            mediaPlayer.setDataSource(mediaFile)
-        } catch (e: IOException) {
-            e.printStackTrace()
-            stopSelf()
+            it.setAudioStreamType(STREAM_MUSIC)
+
+            try {
+                it.setDataSource(mediaFile)
+            } catch (e: IOException) {
+                e.printStackTrace()
+                stopSelf()
+            }
+
+            it.prepareAsync()
         }
-
-        mediaPlayer.prepareAsync()
     }
 
     private fun playMedia() {
-        if (!mediaPlayer.isPlaying) {
-            mediaPlayer.start()
+        mediaPlayer?.let {
+            if (it.isPlaying) {
+                it.start()
+            }
         }
     }
 
     private fun stopMedia() {
-        if (mediaPlayer == null) return
-        if (mediaPlayer.isPlaying) {
-            mediaPlayer.stop()
+        mediaPlayer?.let {
+            if (it.isPlaying) {
+                it.stop()
+            }
         }
     }
 
     private fun pauseMedia() {
-        if (mediaPlayer.isPlaying) {
-            mediaPlayer.pause()
-            resumePosition = mediaPlayer.currentPosition
+        mediaPlayer?.let {
+            if (it.isPlaying) {
+                it.pause()
+                resumePosition = it.currentPosition
+            }
         }
     }
 
     private fun resumeMedia() {
-        if (!mediaPlayer.isPlaying) {
-            mediaPlayer.seekTo(resumePosition)
-            mediaPlayer.start()
+        mediaPlayer?.let {
+            if (it.isPlaying) {
+                it.seekTo(resumePosition)
+                it.start()
+            }
         }
     }
 
-    class LocalBinder : Binder() {
-        fun getService(): MediaPlayerService {
-            return MediaPlayerService()
+    private fun requestAudioFocus(): Boolean {
+        audioManager = getSystemService(Context.AUDIO_SERVICE) as AudioManager
+        val result = audioManager.requestAudioFocus(this, STREAM_MUSIC, AUDIOFOCUS_GAIN)
+        if (result == AUDIOFOCUS_REQUEST_GRANTED) {
+            return true
         }
+        //retorna falso quando não for possível obter foco
+        return false
+    }
+
+    private fun removeAudioFocus(): Boolean {
+        return AudioManager.AUDIOFOCUS_REQUEST_GRANTED == audioManager.abandonAudioFocus(this)
+    }
+}
+
+class LocalBinder : Binder() {
+    fun getService(): MediaPlayerService {
+        return MediaPlayerService()
     }
 }
