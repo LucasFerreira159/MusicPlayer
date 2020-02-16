@@ -1,0 +1,58 @@
+<?xml version="1.0" encoding="utf-8"?>
+<RelativeLayout xmlns:android="http://schemas.android.com/apk/res/android"
+    xmlns:tools="http://schemas.android.com/tools"
+    android:layout_width="match_parent"
+    android:layout_height="wrap_content"
+    android:layout_margin="16dp">
+
+    <ImageView
+        android:id="@+id/img_cover"
+        android:layout_width="65dp"
+        android:layout_height="63dp"
+        android:background="@color/colorPrimary"
+        android:elevation="5dp" />
+
+    <LinearLayout
+        android:id="@+id/layout_info"
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        android:layout_centerVertical="true"
+        android:layout_gravity="center_vertical"
+        android:layout_marginRight="@dimen/margin_small"
+        android:layout_toLeftOf="@+id/text_time"
+        android:layout_toRightOf="@id/img_cover"
+        android:orientation="vertical">
+
+        <TextView
+            android:id="@+id/text_title"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:layout_marginLeft="@dimen/margin_big"
+            android:textColor="@color/text_color_black"
+            android:textSize="@dimen/font_big"
+            tools:text="Brick by Boring Brick" />
+
+        <TextView
+            android:id="@+id/text_artist"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:layout_marginLeft="@dimen/margin_big"
+            android:fontFamily="@font/roboto_light"
+            android:textColor="@color/text_color_grey"
+            android:textSize="@dimen/font_medium"
+            tools:text="Paramore" />
+
+    </LinearLayout>
+
+    <TextView
+        android:id="@+id/text_time"
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        android:layout_alignParentRight="true"
+        android:layout_centerVertical="true"
+        android:gravity="end"
+        android:textColor="@color/text_color_grey"
+        android:textSize="@dimen/font_medium"
+        android:text="03:27" />
+
+</RelativeLayout>
