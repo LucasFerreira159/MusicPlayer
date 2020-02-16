@@ -211,10 +211,10 @@ class MediaPlayerService :
     private fun removeAudioFocus(): Boolean {
         return AudioManager.AUDIOFOCUS_REQUEST_GRANTED == audioManager.abandonAudioFocus(this)
     }
-}
 
-class LocalBinder : Binder() {
-    fun getService(): MediaPlayerService {
-        return MediaPlayerService()
+    class LocalBinder : Binder() {
+        fun getService(): MediaPlayerService {
+            return MediaPlayerService()
+        }
     }
 }
