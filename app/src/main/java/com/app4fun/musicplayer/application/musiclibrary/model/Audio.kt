@@ -7,5 +7,6 @@ data class Audio(
     val title: String,
     val album: String,
     val artist: String,
-    val time: String
+    val time: String,
+    val albumArt: String
 ) : Serializable

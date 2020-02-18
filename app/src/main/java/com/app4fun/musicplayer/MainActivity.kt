@@ -12,12 +12,14 @@ import android.provider.MediaStore.Audio.Media.*
 import android.widget.Toast
 import androidx.appcompat.app.AppCompatActivity
 import androidx.recyclerview.widget.LinearLayoutManager
+import com.app4fun.musicplayer.application.infrastructure.util.StorageUtil
 import com.app4fun.musicplayer.application.musiclibrary.adapter.MusicLibraryAdapter
+import com.app4fun.musicplayer.application.musiclibrary.interfaces.AudioView
 import com.app4fun.musicplayer.application.musiclibrary.model.Audio
 import com.app4fun.musicplayer.service.MediaPlayerService
 import kotlinx.android.synthetic.main.activity_main.*
 
-class MainActivity : AppCompatActivity() {
+class MainActivity : AppCompatActivity(), AudioView {
 
     private var player: MediaPlayerService? = null
     private var serviceBound = false
@@ -39,6 +41,10 @@ class MainActivity : AppCompatActivity() {
 
     }
 
+    companion object {
+        val Broadcast_PLAY_NEW_AUDIO = "com.app4fun.musicplayer.PlayNewAudio"
+    }
+
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
         setContentView(R.layout.activity_main)
@@ -46,12 +52,10 @@ class MainActivity : AppCompatActivity() {
         //playAudio("https://upload.wikimedia.org/wikipedia/commons/6/6c/Grieg_Lyric_Pieces_Kobold.ogg")
 
         loadAudio()
-        //play the first audio in the ArrayList
-        playAudio(audioList[0].data)
 
         toolbar.title = "Minhas Musicas"
 
-        val adapter = MusicLibraryAdapter(audioList)
+        val adapter = MusicLibraryAdapter(audioList, this)
 
         recycler_track.layoutManager = LinearLayoutManager(applicationContext)
         recycler_track.setHasFixedSize(true)
@@ -80,20 +84,31 @@ class MainActivity : AppCompatActivity() {
         }
     }
 
-    private fun playAudio(media: String) {
+    override fun onClickPlay(index: Int) {
+        playAudio(index)
+    }
+
+    private fun playAudio(index: Int) {
         //Checa se o serviço está ativo
         if (!serviceBound) {
+
+            val storage = StorageUtil(applicationContext)
+            storage.storeAudio(audioList)
+            storage.storeAudioIndex(index)
+
             val playerIntent = Intent(this, MediaPlayerService::class.java)
-            playerIntent.putExtra("media", media)
-            if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) {
-                startForegroundService(playerIntent)
-            } else {
-                startService(playerIntent)
-            }
+            startService(playerIntent)
             bindService(playerIntent, serviceConnection, Context.BIND_AUTO_CREATE)
         } else {
+            //Armazena novo audioIndex no SharedPreferences
+            val storage = StorageUtil(applicationContext)
+            storage.storeAudioIndex(index)
+
             //O serviço está ativo
             //Envia media com Broadcast Receiver
+            val broadCastIntent = Intent(Broadcast_PLAY_NEW_AUDIO)
+            sendBroadcast(broadCastIntent)
+
         }
     }
 
@@ -112,9 +127,9 @@ class MainActivity : AppCompatActivity() {
                 val album = cursor.getString(cursor.getColumnIndex(ALBUM))
                 val artist = cursor.getString(cursor.getColumnIndex(ARTIST))
                 val time = cursor.getString(cursor.getColumnIndex(MediaStore.Audio.AudioColumns.DURATION))
-
+                //val art = cursor.getString(cursor.getColumnIndex(MediaStore.Audio.Albums.ALBUM_ART))
                 //Salva as informações na lista
-                audioList.add(Audio(data, title, album, artist, time))
+                audioList.add(Audio(data, title, album, artist, time, ""))
             }
         }
 
