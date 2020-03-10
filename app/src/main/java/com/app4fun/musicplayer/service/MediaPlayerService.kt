@@ -1,9 +1,6 @@
 package com.app4fun.musicplayer.service
 
-import android.app.Notification
-import android.app.NotificationManager
-import android.app.PendingIntent
-import android.app.Service
+import android.app.*
 import android.content.*
 import android.graphics.Bitmap
 import android.graphics.BitmapFactory
@@ -17,8 +14,12 @@ import android.media.session.MediaSession
 import android.media.session.MediaSessionManager
 import android.net.Uri
 import android.os.Binder
+import android.os.Build
 import android.os.IBinder
 import android.os.RemoteException
+import android.support.v4.media.MediaMetadataCompat
+import android.support.v4.media.session.MediaControllerCompat
+import android.support.v4.media.session.MediaSessionCompat
 import android.telephony.PhoneStateListener
 import android.telephony.TelephonyManager
 import android.util.Log
@@ -56,8 +57,8 @@ class MediaPlayerService :
 
     //MediaSession
     private lateinit var mediaSessionManager: MediaSessionManager
-    private lateinit var mediaSession: MediaSession
-    private lateinit var transportControls: MediaController.TransportControls
+    private lateinit var mediaSession: MediaSessionCompat
+    private lateinit var transportControls: MediaControllerCompat.TransportControls
 
     companion object {
         val ACTION_PLAY = "com.app4fun.musicplayer.ACTION_PLAY"
@@ -425,17 +426,17 @@ class MediaPlayerService :
 
         mediaSessionManager = getSystemService(Context.MEDIA_SESSION_SERVICE) as MediaSessionManager
         //Cria um novo MediaSession
-        mediaSession = MediaSession(applicationContext, "AudioPlayer")
+        mediaSession = MediaSessionCompat(applicationContext, "AudioPlayer")
         //Recupera MediaSession transport controls
         transportControls = mediaSession.controller.transportControls
         //atribui Media Session -> pronto para receber comandos
         mediaSession.isActive = true
-        mediaSession.setFlags(MediaSession.FLAG_HANDLES_TRANSPORT_CONTROLS)
+        mediaSession.setFlags(MediaSessionCompat.FLAG_HANDLES_TRANSPORT_CONTROLS)
 
         updateMetaData()
 
         //Atribui callbalck para receber atualizações do MediaSession
-        mediaSession.setCallback(object : MediaSession.Callback() {
+        mediaSession.setCallback(object : MediaSessionCompat.Callback() {
             override fun onPlay() {
                 super.onPlay()
                 resumeMedia()
@@ -481,13 +482,14 @@ class MediaPlayerService :
             R.drawable.nocover
         )
 
-        if (!::mediaSession.isInitialized)
-        //Cria um novo MediaSession
-            mediaSession = MediaSession(applicationContext, "AudioPlayer")
+        if (!::mediaSession.isInitialized) {
+            //Cria um novo MediaSession
+            mediaSession = MediaSessionCompat(applicationContext, "AudioPlayer")
+        }
 
         //atualiza a metadata
         mediaSession.setMetadata(
-            MediaMetadata.Builder()
+            MediaMetadataCompat.Builder()
                 .putBitmap(MediaMetadata.METADATA_KEY_ALBUM_ART, albumArt)
                 .putString(MediaMetadata.METADATA_KEY_ARTIST, activeAudio.artist)
                 .putString(MediaMetadata.METADATA_KEY_ALBUM, "")
@@ -528,6 +530,13 @@ class MediaPlayerService :
     }
 
     private fun buildNotification(playbackStatus: PlaybackStatus) {
+
+        if (!::mediaSession.isInitialized) {
+            //Cria um novo MediaSession
+            mediaSession = MediaSessionCompat(applicationContext, "AudioPlayer")
+        }
+
+
         var notificationIcon = R.drawable.ic_play_circle_outline
         var play_pauseAction: PendingIntent? = null
 
@@ -546,16 +555,27 @@ class MediaPlayerService :
 
         val notificationManager = NotificationManagerCompat.from(this)
 
+        val channelId = "MUSIC_PLAYER_CHANNEL_ID"
+
+        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) {
+            val channelName = "Music Channel"
+            val importance = NotificationManager.IMPORTANCE_HIGH
+            val notificationChannel = NotificationChannel(channelId, channelName, importance)
+            notificationManager.createNotificationChannel(notificationChannel)
+        }
+
         val notificationBuilder = NotificationCompat.Builder(this)
-            .setShowWhen(false)
-            /* .setStyle(androidx.media.app.NotificationCompat.MediaStyle()
-                 .setMediaSession(mediaSession.sessionToken)
-                 .setShowActionsInCompactView(0,1,2))*/
+            .setStyle(
+                androidx.media.app.NotificationCompat.MediaStyle()
+                    .setMediaSession(mediaSession.sessionToken)
+                    .setShowActionsInCompactView(0, 1, 2)
+            )
             .setColor(resources.getColor(R.color.colorPrimary))
             .setLargeIcon(largeIcon)
             .setSmallIcon(android.R.drawable.stat_sys_headset)
             .setContentText(activeAudio.artist)
-            .setContentTitle("Album")
+            .setContentTitle(activeAudio.album)
+            .setChannelId(channelId)
             .setContentInfo(activeAudio.title)
             .addAction(R.drawable.ic_skip_previous, "previous", playbackAction(3))
             .addAction(R.drawable.ic_pause, "pause", play_pauseAction)
