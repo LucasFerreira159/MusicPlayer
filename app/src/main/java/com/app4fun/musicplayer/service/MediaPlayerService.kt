@@ -4,10 +4,7 @@ import android.app.Notification
 import android.app.NotificationManager
 import android.app.PendingIntent
 import android.app.Service
-import android.content.BroadcastReceiver
-import android.content.Context
-import android.content.Intent
-import android.content.IntentFilter
+import android.content.*
 import android.graphics.Bitmap
 import android.graphics.BitmapFactory
 import android.media.AudioManager
@@ -18,6 +15,7 @@ import android.media.MediaPlayer.*
 import android.media.session.MediaController
 import android.media.session.MediaSession
 import android.media.session.MediaSessionManager
+import android.net.Uri
 import android.os.Binder
 import android.os.IBinder
 import android.os.RemoteException
@@ -70,6 +68,13 @@ class MediaPlayerService :
 
         //AudioPlayer ID Notificação
         val NOTIFICATION_ID = 101
+
+        fun getAlbumArtUri(albumId: Long): Uri? {
+            return ContentUris.withAppendedId(
+                Uri.parse("content://media/external/audio/albumart"),
+                albumId
+            )
+        }
     }
 
     /**

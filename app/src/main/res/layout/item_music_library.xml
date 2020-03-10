@@ -9,7 +9,8 @@
         android:id="@+id/img_cover"
         android:layout_width="65dp"
         android:layout_height="63dp"
-        android:background="@color/colorPrimary"
+        android:scaleType="centerCrop"
+        tools:background="@color/colorPrimary"
         android:elevation="5dp" />
 
     <LinearLayout

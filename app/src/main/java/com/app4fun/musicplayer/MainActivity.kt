@@ -126,10 +126,11 @@ class MainActivity : AppCompatActivity(), AudioView {
                 val title = cursor.getString(cursor.getColumnIndex(TITLE))
                 val album = cursor.getString(cursor.getColumnIndex(ALBUM))
                 val artist = cursor.getString(cursor.getColumnIndex(ARTIST))
-                val time = cursor.getString(cursor.getColumnIndex(MediaStore.Audio.AudioColumns.DURATION))
+                val time = cursor.getLong(cursor.getColumnIndex(MediaStore.Audio.AudioColumns.DURATION))
+                val albumId = cursor.getLong(cursor.getColumnIndex(MediaStore.Audio.Media.ALBUM_ID))
                 //val art = cursor.getString(cursor.getColumnIndex(MediaStore.Audio.Albums.ALBUM_ART))
                 //Salva as informações na lista
-                audioList.add(Audio(data, title, album, artist, time, ""))
+                audioList.add(Audio(data, title, album, artist, time, albumId))
             }
         }
 
